@@ -1,0 +1,6 @@
+# Planning docs and the original brief stay on my machine only
+docs/
+
+.venv/
+__pycache__/
+.pytest_cache/
