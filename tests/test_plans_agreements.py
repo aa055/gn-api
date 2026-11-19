@@ -127,3 +127,31 @@ def test_invoice_range_rules(client, query, code):
     else:
         assert res.status_code == 422
         assert error_code(res) == code
+
+
+@pytest.mark.parametrize("start_date", ["0001-01-15", "9999-12-15"])
+def test_start_date_at_the_edge_of_the_calendar_is_validation(client, start_date):
+    make_plan(client)
+    member = make_member(client)
+    res = make_agreement(client, member["id"], start_date=start_date, due_day=20)
+    assert res.status_code == 422
+    assert error_code(res) == "VALIDATION"
+
+
+def test_agreement_write_waits_for_the_lock(client):
+    # A reconciliation run holds the lock while it loops over agreements,
+    # so creating an agreement must wait for it instead of changing the dict mid-loop.
+    import threading
+    from app import main
+
+    make_plan(client)
+    member = make_member(client)
+    results = []
+    with main.lock:
+        writer = threading.Thread(target=lambda: results.append(make_agreement(client, member["id"]).status_code))
+        writer.start()
+        writer.join(timeout=0.3)
+        assert writer.is_alive()   # blocked on the lock
+        assert main.agreements == {}
+    writer.join()
+    assert results == [201]

@@ -222,6 +222,11 @@ def create_plan(body: PlanIn):
 
 @app.post("/agreements", status_code=201)
 def create_agreement(body: AgreementIn):
+    # The first invoice needs the due dates a month either side of the start,
+    # and Python dates only go from year 1 to 9999.
+    if not 2 <= int(body.start_date[:4]) <= 9998:
+        raise ApiError(422, "VALIDATION", "start_date must be between years 2 and 9998")
+
     member = members.get(body.member_id)
     if member is None:
         raise ApiError(422, "UNKNOWN_MEMBER", f"No member {body.member_id}")
@@ -239,7 +244,9 @@ def create_agreement(body: AgreementIn):
         "start_date": body.start_date,
         "due_day": body.due_day,
     }
-    agreements[agreement["id"]] = agreement
+    # Under the lock so a reconciliation run never sees the dict change mid-loop
+    with lock:
+        agreements[agreement["id"]] = agreement
     return agreement
 
 

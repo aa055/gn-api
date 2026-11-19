@@ -36,13 +36,13 @@ Storage is plain dicts in memory. Uvicorn runs with one worker so every request 
 
 - Persistence: data is gone when the container stops. The brief asks for each run to start empty.
 - Extra endpoints like `GET /members/{id}` or listing plans. Only what the brief describes is built.
-- Agreements starting in January of year 1, or invoices running past December 9999, return a 500. Python's `date` can't go outside years 1–9999.
 
 ## Assumptions
 
 - Malformed input (`422 VALIDATION`) is checked before any business rule, so a missing `name` wins over a bad phone.
 - On `GET /agreements/{id}/invoices`, a malformed `from`/`to` is `VALIDATION` first. Then an unknown agreement is `404`. Then `INVALID_RANGE`.
 - On `POST /agreements` the checks run in the brief's order: `UNKNOWN_MEMBER`, `UNKNOWN_PLAN`, `PLAN_COUNTRY_MISMATCH`.
+- An agreement `start_date` outside years 2–9998 is `422 VALIDATION`. The first invoice needs the due dates a month either side of the start, and Python dates only cover years 1–9999.
 - Only ASCII `0-9` count as digits in a phone. Arabic-Indic digits are `INVALID_PHONE`.
 - "Spaces" means the space character only. Tabs or other whitespace in a phone are `INVALID_PHONE`.
 - An unencoded `+` in a lookup query arrives as a space. It's stripped, and the number is then read as dial code + mobile, so it still works.
